@@ -1,0 +1,364 @@
+---
+title: "STAT 302 Bottle Flipping"
+author: "Group 15---Mark Wu,Iris Pu,Moiz Zaki, Glen Kuenzi"
+date: "5/1/2020"
+output: html_document
+---
+
+<style type="text/css">
+header { color: blue; }
+footer { color:red;}
+</style>
+
+<h4>Introduction / background</h4>
+
+Keeping in line with Stay-at-home orders requires creativity, as sampling from the larger population isn't very feasible. As such, we decided to do some home experiments with ordinary bottles to see how changing different explanatory variables might affect the success rate of flipping the bottles. A success is achieved if the bottle is flipped 360 degrees and lands upright. A failure is achieved when the bottle lands on any part other than the bottom. When collecting data on different variables, care was taken to avoid bias in the results of the data. We decided to alternate evenly between each condition, as opposed to collecting the first half of the sample with one condition and the second half with another condition. This was done to avoid the later part or parts of the sample from being overaffected by improvements in bottle flipping skill. Further, this method is superior because it doesn't allow the bottle flipper to get the feel for one set of conditions over the course of flipping with those conditions many times in succession.
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message=FALSE, warning=FALSE)
+library(dplyr)
+library(tidyverse)
+library(lubridate)
+
+source("gprob.R")
+source("chi-simulation.R")
+```
+
+```{r}
+Diff_bott1=read_csv("Different Bottle.csv")
+Diff_height1=read_csv("Different Height.csv")
+Right_Hand=read_csv("Dominant hand.csv")
+Left_hand=read_csv("Non-dominant hand.csv")
+Both_hand=read_csv("Both hand.csv")
+```
+
+<header><h1 align="center">First Test--The chi-square test for different bottle </h1></header>
+
+
+<h4>Description</h4>
+
+Olympic athletes use the very best equipment in order to achieve their full potential. In the same way, it is important for a bottle flipper to know what type of bottle (with a standardized volume and water level) is best for them. This was the goal for the test- to figure out which of three 20oz (591ml) bottle filled with 150ml of water performed most successfully for Glen Kuenzi, an amateur bottle flipper. Three bottles with distinct shapes but equal volume were selected for comparison, namely Coca-Cola, Gatorade, and A&W Root Beer.
+
+<h4>Hypothesis for chi-square test</h4>
+
+H0:The bottles all perform equally well 
+
+HA:The bottles DO NOT all perform equally well
+
+<h4>Table of observed and expected(Two-way Table)</h4>
+
+```{r table}
+##Observed
+Bottle_1=matrix(c(18,72,22,68,14,76),ncol =3,nrow = 2 )
+colnames(Bottle_1)=c("Coke","Gatorade","A+W")
+rownames(Bottle_1)=c("Success","Failure")
+
+Bottle_1
+##Expected(row total*column total/Total)
+Total=270
+Row1_total=54
+Row2_total=216
+column_total=90
+Bottle_2=matrix(c(Row1_total*column_total/Total,Row2_total*column_total/Total,Row1_total*column_total/Total,Row2_total*column_total/Total,Row1_total*column_total/Total,Row2_total*column_total/Total),ncol =3,nrow = 2 )
+colnames(Bottle_2)=c("Coke","Gatorade","A+W")
+rownames(Bottle_2)=c("Success","Failure")
+
+Bottle_2
+```
+
+<h4>Test the condition </h4>
+
+
+1.Independece:Each case that contribute to a count to the table are independence of all other case in the table.
+
+2.Sample size/ distribution:We all have expected count more than 5.
+
+3.Degree of freedom:We have df=2,so we can apply the chi-square test. 
+
+All condition met!
+
+<h4>chi-square </h4>
+
+```{r chisq}
+observed=Bottle_1
+expected=Bottle_2
+x2=sum( (observed-expected)^2 / expected )
+
+x2
+```
+
+<h4>P-value for chi-square</h4>
+
+For a two-way table, df=(Rows-1)(Columns-1)=(2-1)*(3-1)=2
+
+```{r pvalue}
+df=(2-1)*(3-1)
+p_value1=1-pchisq(x2,df)
+
+p_value1
+```
+
+<h4>Plot for chi-square,the graph show the density of the chi-square distribution with the correct degrees of freedom</h4>
+
+```{r plot}
+gchisq(2,color="Blue")+
+  geom_density(fill="blue",alpha=0.5)+
+  geom_vline(xintercept =x2,color="pink")+
+  xlab("Times")+
+  geom_chisq_density(2)+
+  geom_chisq_fill(2)
+```
+
+<h4>Use simulation to estimate the sampling distribution of the test statistic, and overlay on the graph the density of the corresponding chi-square density.</h4>
+
+```{r}
+x2_simu = simulate_null_independence(10000,observed)
+
+dat = tibble(x2 = x2_simu)
+ggplot(dat, aes(x=x2)) +
+  geom_density() +
+  geom_chisq_density(2, color = "red") +
+  geom_chisq_fill(2, fill = "red", a = x2) +
+  geom_hline(yintercept = 0) +
+  xlab("Simulated chi-square test statistic") +
+  ggtitle("Null Sampling Distribution")+
+  theme_bw()
+```
+
+<h4>Interpret the simulation graph</h4>
+
+The chi-square distribution is fairly accurate approximation of the simulation-based null sampling distribution.
+
+<h4>Interpret the p-value and the graph for the chi-square test</h4>
+
+The P-value represents the area the the right of 2.222 under the chi square distribution with two degrees of freedom.
+
+Since p-value = 0.329193 > 0.05, this means that there's not significant enough evidence to reject the null hypothesis, which means we cannot say that any of the bottles perform better or worse than the other bottles. 
+
+<header><h1 align="center">Second Test--The chi-square test for different standing height bottle flipping test</h1></header>
+
+The independent variable of the test is the standing height, which determines the distance between hand and the floor. The bottle being used is a 20 oz (591 ml) Coca-Cola bottle containing 150ml of water  and the distance between head and hand is controlled. All fips were done with the dominant (right) hand. The standing distance is 1m, 1.5m, 2m respectively. The bottle is flipped for 100 times with each height and success and failure counts are recorded.
+
+<h4>Hypothesis for chi-square test</h4>
+
+H0: Different standing heights DO NOT impact the bottle flipping results.
+
+HA: Different standing heights impact the bottle flipping results.
+
+<h4>Table of observed and expected(Two-way Table)</h4>
+
+```{r  tab2}
+##Observed
+Height_1=matrix(c(35,65,31,69,8,92),ncol =3,nrow = 2 )
+colnames(Height_1)=c("Height: 1.0 m","Height: 1.5 m","A+Height: 2.0 m")
+rownames(Height_1)=c("Success","Failure")
+
+Height_1
+##Expected(row total*column total/Total)
+Total=300
+Row1H_total=35+31+8
+Row2H_total=65+69+92
+column_total=100
+Height_2=matrix(c(Row1H_total*column_total/Total,Row2H_total*column_total/Total,Row1H_total*column_total/Total,Row2H_total*column_total/Total,Row1H_total*column_total/Total,Row2H_total*column_total/Total),ncol =3,nrow = 2 )
+colnames(Height_2)=c("Height: 1.0 m","Height: 1.5 m","A+Height: 2.0 m")
+rownames(Height_2)=c("Success","Failure")
+
+Height_2
+```
+
+<h4>Test the condition </h4>
+
+1.Independece:Each case that contribute to a count to the table are independence of all other case in the table.
+
+2.Sample size/ distribution:We all have expected count more than 5.
+
+3.Degree of freedom:We have df=2,so we can apply the chi-square test. 
+
+All condition met!
+
+<h4>chi-square </h4>
+
+```{r chisq2}
+observed2=Height_1
+expected2=Height_2
+x2_h=sum( (observed2-expected2)^2 / expected2 )
+
+x2_h
+```
+
+<h4>P-value for chi-square</h4>
+
+For a two-way table, df=(Rows-1)(Columns-1)=(2-1)*(3-1)=2
+
+```{r pvalue2}
+df_2=(2-1)*(3-1)
+p_value2=1-pchisq(x2_h,df_2)
+
+p_value2
+```
+
+<h4>Plot for chi-square,the graph show the density of the chi-square distribution with the correct degrees of freedom</h4>
+
+```{r plot2}
+gchisq(2,color="Blue")+
+  geom_density(fill="blue",alpha=0.5)+
+  geom_vline(xintercept =x2_h,color="pink")+
+  xlab("Times")+
+  geom_chisq_density(2)+
+  geom_chisq_fill(2)
+```
+
+
+<h4>Use simulation to estimate the sampling distribution of the test statistic, and overlay on the graph the density of the corresponding chi-square density.</h4>
+
+```{r}
+x2_simu_2 = simulate_null_independence(10000,observed2)
+
+dat2 = tibble(x2_h = x2_simu_2)
+ggplot(dat2, aes(x=x2_h)) +
+  geom_density() +
+  geom_chisq_density(2, color = "red") +
+  geom_chisq_fill(2, fill = "red", a = x2_h) +
+  geom_hline(yintercept = 0) +
+  xlab("Simulated chi-square test statistic") +
+  ggtitle("Null Sampling Distribution")+
+  theme_bw()
+```
+
+
+<h4>Interpret the simulation graph</h4>
+
+The chi-square distribution is fairly accurate approximation of the simulation-based null sampling distribution also, but since p-value for this test is extremely small so we cannot see the fill paint part.
+
+<h4>Interpret the p-value and the graph for the chi-square test</h4>
+
+The p-value for chi-square test is the area to the right of 22.85338 under a chi-square distributiion with 2 degree of freedom.
+
+The p-value = 1.090061e-05 > 0.05, so  we reject the null hypothesis, which means that the data provides strong evidence that different standing heights impact the bottle flipping results (chi-square, test statistic: 22.8534, p-value = 0.000011)
+
+<header><h1 align="center"> Third Test-- Paired data </h1></header>
+
+<h4> Description </h4>
+
+For this test, each group member flipped a 20 oz (591 ml) Coca-Cola Bottle 100 times with their dominant hand, and 100 times with their non-dominant hand. The flipping hand was alternated after every trial to make sure each hand benefitted equally from improvements in bottle flipping skill. The goal is to see which hand, if any, is more effective within the group.
+
+<h4>Hypothesis for paired data</h4>
+
+H0: μdiff = 0. There is NO difference between "Dominant Hand" and "Non-dominant hand". 
+
+HA: μdiff  ̸= 0. There is a difference between "Dominant Hand" and "Non-dominant hand".
+
+<h4>Table to show the paired data</h4>
+
+```{r p2}
+Both_hand
+
+pair=as.matrix(read_csv("Both hand.csv"))
+pair[c(1:4),c(1,3,6)]
+
+n=4
+s_both_do=select(Both_hand,Success_for_dominant_hand )
+s_both_non_do=select(Both_hand,Success_for_non_dominant_hand )
+
+s_diff=s_both_do-s_both_non_do
+μdif=sum(s_diff)/4
+sd_diff=sd(s_diff$Success_for_dominant_hand)
+
+both1=matrix(c(n,μdif,sd_diff),ncol =3,nrow = 1 )
+colnames(both1)=c("n","μ","s")
+rownames(both1)=c("Summary")
+
+both1  
+```
+
+<h4>p-value and the confidnece interval for paired data</h4>
+
+```{r}
+se=sd_diff/sqrt(n)
+t_score=(μdif-0)/se
+df_3=4-1
+p_pair=2*pt(-abs(t_score),df_3)
+
+p_pair
+
+ci = μdif + c(-1,1) * qt(0.975,df_3) * se
+
+ci
+```
+
+<h4>95% confidence interval of paired data</h4>
+
+We are 95% confident that the mean difference in the number of successes between the "Dominant Hand" and "Non-dominant hand" is between -1.564 times and 25.564.
+
+<h4>T distribution with df=2</h4>
+
+```{r tgraph}
+dat123=tibble(t=t_score)
+ggplot(dat123, aes(x=t)) +
+  geom_norm_fill(0,1,fill="blue",color="blue",alpha=0.5) +
+  ggtitle("T distribution wiht 2 degree of freedom")+
+  xlab("t")+
+  ylab("Density")+
+  geom_vline(xintercept = t_score, alpha=0.5)+
+  theme_bw()
+```
+
+<h4>Test the condition </h4>
+
+1.Independece of observations:The data are from the experiment 
+
+2.Observations come from a nearly normal distribution:We can observe the graph, it's nearly normal, it's bell-shaped.
+
+All condition met!
+
+<h4>Interpret the p-value</h4>
+
+Since p-value =0.06699142>0.05, there is not significant enough evidence to reject the null hypothesis at the siginificance level alpha =0.05, which means that we have strong evident that there is no difference between "Dominant Hand" and "Non-dominant hand".
+
+<header><h1 align="center">Binomial Distribution:Right Hand</h1></header>
+
+<h4>Description</h4>
+
+Since there's only two result for our flip bottle experiment, it's appropriate to show the binomial distribion,and we're going to show the "Dominant Hand" and "Non-dominant hand" for 400 flips and each one assign 100 flips.  We control the bottle to be the 591 ml Coca-Cola bottle with 150ml filled water.
+
+```{r d1}
+Right_Hand
+success_right=sum(select(Right_Hand,Success_for_dominant_hand))
+Total_right=sum(select(Right_Hand,Total_for_dominant_hand))
+prob=success_right/Total_right
+
+
+mu5 = 400*0.2725
+sigma5 = sqrt(400*0.2725*0.7275)
+
+gbinom(400,0.2725) 
+gbinom(400,0.2725,scale = T) 
+```
+
+<h4>Interpret graph</h4>
+
+Our np>=10 and n(1-p)>=10 ,the grpah looked like the normal distribution because of Central limit theorem,we can see the bell-shaped from the second graph. Also, as our p < 0.5, the distribution is skewed to the right from our first grpah.
+
+<header><h1 align="center">Binomial Distribution:Left Hand</h1></header>
+
+```{r d2}
+Left_hand
+success_left=sum(select(Left_hand,Success_for_non_dominant_hand))
+Total_left=sum(select(Left_hand,Total_for_non_dominant_hand))
+prob2=success_left/Total_left
+
+mu6 = 400*0.1525
+sigma6 = sqrt(400*0.1525*0.8475)
+
+gbinom(400,0.1525) 
+gbinom(400,0.1525,scale = T) 
+```
+
+<h4>Interpret graph</h4>
+
+Our np>=10 and n(1-p)>=10 ,the grpah looked like the normal distribution because of Central limit theroem,we can see he bell-shaped from the second graph. Also, as our p < 0.5, the distribution is skewed to the right form out first grpah.
+
+<footer><h1 align="center">Conclusion</h1></footer>
+
+Given the COVID-19 pandemic, there were many challenges to sampling. A large, representative sample from the population obviously could not be procured, so the findings of this study only reflect how different variables affect the bottle flipping of our group members. Still, the findings are interesting, especially the fact that the null hypothesis couldn't be rejected in different bottles test as well as the different hands test, even though many people would expect those variables to make a difference. Once possible, it would be very interesting to conduct these tests on a much larger scale in order to get results that are more representative of the population at large.

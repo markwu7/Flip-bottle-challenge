@@ -1,0 +1,4 @@
+﻿Height/test,Height: 1.0m,Height: 1.5m,Height: 2.0m,Total
+Success,35,31,8,74
+Failure,65,69,92,226
+Total,100,100,100,300
